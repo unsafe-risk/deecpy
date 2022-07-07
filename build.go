@@ -3,6 +3,7 @@ package deecpy
 import (
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"sync"
 )
@@ -43,7 +44,7 @@ func build(t reflect.Type) ([]op, error) {
 			ops = append(ops,
 				&opPtrDupMem{
 					Offset: 0,
-					Size:   elem.Size(),
+					Size:   elemSize,
 				},
 			)
 			buildCache.Store(t, ops)
@@ -56,7 +57,7 @@ func build(t reflect.Type) ([]op, error) {
 		ops = append(ops,
 			&opPtrDup{
 				Offset:          0,
-				Size:            t.Size(),
+				Size:            elemSize,
 				SubInstructions: subOps,
 			},
 		)
@@ -230,13 +231,13 @@ func build(t reflect.Type) ([]op, error) {
 	return ops, ErrUnsupportedType
 }
 
-func debugBuild(t reflect.Type) {
+func debugBuild(t reflect.Type, w io.Writer) {
 	ops, err := build(t)
 	if err != nil {
 		panic(err)
 	}
 	for i := range ops {
-		fmt.Printf("%v\n", ops[i])
+		fmt.Fprintf(w, "%v\n", ops[i])
 	}
 }
 

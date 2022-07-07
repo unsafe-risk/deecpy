@@ -28,3 +28,12 @@ func Copy[T any](dst, src *T) error {
 	)
 	return nil
 }
+
+func Duplicate[T any](src *T) (*T, error) {
+	var dst T
+	err := Copy(&dst, src)
+	if err != nil {
+		return nil, err
+	}
+	return &dst, nil
+}

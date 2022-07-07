@@ -1,6 +1,8 @@
 package deecpy
 
 import (
+	"math/big"
+	"reflect"
 	"testing"
 )
 
@@ -29,4 +31,33 @@ func BenchmarkCopy(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestCopyBigInt(t *testing.T) {
+	var a = big.NewInt(1)
+	var b big.Int
+	err := Copy(&b, a)
+	if err != nil {
+		t.Error(err)
+	}
+	if b.Cmp(a) != 0 {
+		t.Errorf("expected %v, got %v", a, b)
+	}
+	if !reflect.DeepEqual(&b, a) {
+		t.Errorf("expected %v, got %v", a, b)
+	}
+}
+
+func TestDuplicateBigInt(t *testing.T) {
+	var a = big.NewInt(1)
+	var b, err = Duplicate(a)
+	if err != nil {
+		t.Error(err)
+	}
+	if b.Cmp(a) != 0 {
+		t.Errorf("expected %v, got %v", a, b)
+	}
+	if !reflect.DeepEqual(b, a) {
+		t.Errorf("expected %v, got %v", a, b)
+	}
 }
