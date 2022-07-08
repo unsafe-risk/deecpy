@@ -61,3 +61,60 @@ func TestDuplicateBigInt(t *testing.T) {
 		t.Errorf("expected %v, got %v", a, b)
 	}
 }
+
+func TestDuplicateRecursive(t *testing.T) {
+	type AB struct {
+		F *AB
+	}
+	var a = &AB{F: &AB{}}
+	var b, err = Duplicate(a)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(b, a) {
+		t.Errorf("expected %v, got %v", a, b)
+	}
+}
+
+func TestOpPtrDupMem(t *testing.T) {
+	type Bravo struct {
+		U64  uint64
+		U32  uint32
+		U16  uint16
+		U8   uint8
+		I64  int64
+		I32  int32
+		I16  int16
+		I8   int8
+		F64  float64
+		F32  float32
+		C64  complex64
+		C128 complex128
+		B    bool
+	}
+	type Alfa struct {
+		Charlie *Bravo
+	}
+	var a = &Alfa{Charlie: &Bravo{
+		U64:  1,
+		U32:  2,
+		U16:  3,
+		U8:   4,
+		I64:  5,
+		I32:  6,
+		I16:  7,
+		I8:   8,
+		F64:  3.14,
+		F32:  3.141592,
+		C64:  complex(1, 2),
+		C128: complex(3.14, 2.718),
+		B:    true,
+	}}
+	var b, err = Duplicate(a)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(b, a) {
+		t.Errorf("expected %v, got %v", a, b)
+	}
+}

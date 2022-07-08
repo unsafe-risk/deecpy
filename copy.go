@@ -12,19 +12,20 @@ func Copy[T any](dst, src *T) error {
 	typID := unsafeops.TypeID(&sAny)
 
 	// Lookup the type in the cache
-	ops, ok := getOps(typID)
+	inst, ok := getOps(typID)
 	if !ok {
 		var err error
-		ops, err = build(reflect.TypeOf(src).Elem())
+		inst, err = build(reflect.TypeOf(src).Elem())
 		if err != nil {
 			return err
 		}
+		setOps(typID, inst)
 	}
 
 	exec(
 		unsafe.Pointer(dst),
 		unsafe.Pointer(src),
-		ops,
+		inst,
 	)
 	return nil
 }

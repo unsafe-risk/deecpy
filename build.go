@@ -14,22 +14,24 @@ var IgnoreUnsupportedTypes = true
 
 var buildCache sync.Map
 
-func build(t reflect.Type) ([]op, error) {
-	var ops []op
+func build(t reflect.Type) (*instructions, error) {
+	var inst instructions
 
 	// Lookup in cache
 	if v, ok := buildCache.Load(t); ok {
-		ops = v.([]op)
-		return ops, nil
+		inst := v.(*instructions)
+		return inst, nil
 	}
 
+	// Store Cache
+	buildCache.Store(t, &inst)
+
 	if isValueType(t) {
-		ops = append(ops, &opCopyMem{
+		inst.ops = append(inst.ops, &opCopyMem{
 			Offset: 0,
 			Size:   t.Size(),
 		})
-		buildCache.Store(t, ops)
-		return ops, nil
+		return &inst, nil
 	}
 
 	switch t.Kind() {
@@ -38,72 +40,81 @@ func build(t reflect.Type) ([]op, error) {
 		elemSize := elem.Size()
 		if elemSize == 0 {
 			// struct{} Pointer
-			return ops, nil
+			return &inst, nil
 		}
 		if isValueType(elem) {
-			ops = append(ops,
+			inst.ops = append(inst.ops,
 				&opPtrDupMem{
 					Offset: 0,
 					Size:   elemSize,
 				},
 			)
-			buildCache.Store(t, ops)
-			return ops, nil
+			return &inst, nil
 		}
-		subOps, err := build(elem)
+		subInsts, err := build(elem)
 		if err != nil {
 			return nil, err
 		}
-		ops = append(ops,
+		inst.ops = append(inst.ops,
 			&opPtrDup{
 				Offset:          0,
 				Size:            elemSize,
-				SubInstructions: subOps,
+				SubInstructions: subInsts,
 			},
 		)
-		buildCache.Store(t, ops)
-		return ops, nil
+		return &inst, nil
 	case reflect.Array:
 		elem := t.Elem()
 		elemSize := elem.Size()
-		subOps, err := build(elem)
+		subInsts, err := build(elem)
 		if err != nil {
 			return nil, err
 		}
-		ops = append(ops, &opArrayCopy{
+		inst.ops = append(inst.ops, &opArrayCopy{
 			Offset:          0,
 			ArrayLen:        uintptr(t.Len()),
 			ElemSize:        elemSize,
-			SubInstructions: subOps,
+			SubInstructions: subInsts,
 		})
-		buildCache.Store(t, ops)
-		return ops, nil
+		return &inst, nil
 	case reflect.Slice:
 		elem := t.Elem()
 		elemSize := elem.Size()
 		if isValueType(elem) {
-			ops = append(ops, &opSliceCopyMem{
+			inst.ops = append(inst.ops, &opSliceCopyMem{
 				Offset:   0,
 				ElemSize: elemSize,
 			})
-			buildCache.Store(t, ops)
-			return ops, nil
+			return &inst, nil
 		}
-		subOps, err := build(elem)
+		subInsts, err := build(elem)
 		if err != nil {
 			return nil, err
 		}
-		ops = append(ops, &opSliceCopy{
+		inst.ops = append(inst.ops, &opSliceCopy{
 			Offset:          0,
 			ElemSize:        elemSize,
-			SubInstructions: subOps,
+			SubInstructions: subInsts,
 		})
-		buildCache.Store(t, ops)
-		return ops, nil
+		return &inst, nil
 	case reflect.Struct:
 		var valueTypes uint
 		var nonValueTypes uint
-		var structOps []op
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			fieldType := field.Type
+			if isValueType(fieldType) {
+				valueTypes++
+			} else {
+				nonValueTypes++
+			}
+		}
+		if valueTypes > 0 {
+			inst.ops = append(inst.ops, &opCopyMem{
+				Offset: 0,
+				Size:   t.Size(),
+			})
+		}
 
 		for i := 0; i < t.NumField(); i++ {
 			field := t.Field(i)
@@ -112,75 +123,19 @@ func build(t reflect.Type) ([]op, error) {
 				valueTypes++
 			} else {
 				nonValueTypes++
-				subOps, err := build(fieldType)
+				subInsts, err := build(fieldType)
 				if err != nil {
 					return nil, err
 				}
-				subOps = append([]op{}, subOps...) // Duplicate subOps
-
-				// Apply offset
-				for i := range subOps {
-					switch subOps[i].(type) {
-					case *opCopyMem:
-						subOps[i].(*opCopyMem).Offset += field.Offset
-					case *opPtrDup:
-						subOps[i].(*opPtrDup).Offset += field.Offset
-					case *opPtrDupMem:
-						subOps[i].(*opPtrDupMem).Offset += field.Offset
-					case *opArrayCopy:
-						subOps[i].(*opArrayCopy).Offset += field.Offset
-					case *opSliceCopy:
-						subOps[i].(*opSliceCopy).Offset += field.Offset
-					case *opSliceCopyMem:
-						subOps[i].(*opSliceCopyMem).Offset += field.Offset
-					case *opMapDup:
-						subOps[i].(*opMapDup).Offset += field.Offset
-					}
-				}
-				structOps = append(structOps, subOps...)
+				inst.ops = append(inst.ops, &opCopyStruct{
+					Offset:          field.Offset,
+					Size:            fieldType.Size(),
+					SubInstructions: subInsts,
+				})
 			}
 		}
 
-		if valueTypes > 0 && nonValueTypes > 0 {
-			ops = append(ops, &opCopyMem{
-				Offset: 0,
-				Size:   t.Size(),
-			})
-			// Check if optmization is possible
-			var hasCopyMem bool
-			for i := range structOps {
-				if _, ok := structOps[i].(*opCopyMem); ok {
-					hasCopyMem = true
-					break
-				}
-			}
-			if hasCopyMem {
-				// Optimize: remove overlapping CopyMem instructions
-				var newStructOps []op = make([]op, 0, len(structOps))
-				for i := range structOps {
-					if _, ok := structOps[i].(*opCopyMem); ok {
-						continue
-					}
-					newStructOps = append(newStructOps, structOps[i])
-				}
-				structOps = newStructOps
-			}
-			ops = append(ops, structOps...)
-		} else if valueTypes > 0 && nonValueTypes == 0 {
-			// Unreachable code
-			panic("unreachable")
-		} else if valueTypes == 0 && nonValueTypes > 0 {
-			ops = append(ops, structOps...)
-		} else if valueTypes == 0 && nonValueTypes == 0 {
-			// Unreachable code
-			panic("unreachable")
-		} else {
-			// Unreachable code
-			panic("unreachable")
-		}
-
-		buildCache.Store(t, ops)
-		return ops, nil
+		return &inst, nil
 	case reflect.Map:
 		key := t.Key()
 		keySize := key.Size()
@@ -195,7 +150,7 @@ func build(t reflect.Type) ([]op, error) {
 			return nil, err
 		}
 		// TODO: Optimize Map Duplication
-		ops = append(ops, &opMapDup{
+		inst.ops = append(inst.ops, &opMapDup{
 			Offset:               0,
 			ReflectType:          t,
 			KeySize:              keySize,
@@ -203,41 +158,40 @@ func build(t reflect.Type) ([]op, error) {
 			KeySubInstructions:   keySubOps,
 			ValueSubInstructions: elemSubOps,
 		})
-		buildCache.Store(t, ops)
-		return ops, nil
+		return &inst, nil
 	case reflect.String:
 		if !ConfigCopyString {
 			// Unreachable code
 			panic("unreachable")
 		}
-		ops = append(ops, &opCopyString{
+		inst.ops = append(inst.ops, &opCopyString{
 			Offset: 0,
 		})
 	default:
 		// Unsupported type
 		if IgnoreUnsupportedTypes {
 			// Use CopyMem for unsupported types
-			ops = append(ops, &opCopyMem{
+			inst.ops = append(inst.ops, &opCopyMem{
 				Offset: 0,
 				Size:   t.Size(),
 			})
-			buildCache.Store(t, ops)
+			return &inst, nil
 		}
 	}
 
 	if IgnoreUnsupportedTypes {
-		return ops, nil
+		return &inst, nil
 	}
-	return ops, ErrUnsupportedType
+	return nil, ErrUnsupportedType
 }
 
 func debugBuild(t reflect.Type, w io.Writer) {
-	ops, err := build(t)
+	inst, err := build(t)
 	if err != nil {
 		panic(err)
 	}
-	for i := range ops {
-		fmt.Fprintf(w, "%v\n", ops[i])
+	for i := range inst.ops {
+		fmt.Fprintf(w, "%v\n", inst.ops[i])
 	}
 }
 

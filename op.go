@@ -10,6 +10,10 @@ type op interface {
 	Op()
 }
 
+type instructions struct {
+	ops []op
+}
+
 type opCopyMem struct {
 	Offset uintptr
 	Size   uintptr
@@ -24,7 +28,7 @@ func (o *opCopyMem) Op() {}
 type opPtrDup struct {
 	Offset          uintptr
 	Size            uintptr
-	SubInstructions []op
+	SubInstructions *instructions
 }
 
 func (o *opPtrDup) String() string {
@@ -48,7 +52,7 @@ type opArrayCopy struct {
 	Offset          uintptr
 	ArrayLen        uintptr
 	ElemSize        uintptr
-	SubInstructions []op
+	SubInstructions *instructions
 }
 
 func (o *opArrayCopy) String() string {
@@ -60,7 +64,7 @@ func (o *opArrayCopy) Op() {}
 type opSliceCopy struct {
 	Offset          uintptr
 	ElemSize        uintptr
-	SubInstructions []op
+	SubInstructions *instructions
 }
 
 func (o *opSliceCopy) String() string {
@@ -85,9 +89,9 @@ type opMapDup struct {
 
 	ReflectType          reflect.Type
 	KeySize              uintptr
-	KeySubInstructions   []op
+	KeySubInstructions   *instructions
 	ValueSize            uintptr
-	ValueSubInstructions []op
+	ValueSubInstructions *instructions
 }
 
 func (o *opMapDup) String() string {
@@ -105,6 +109,18 @@ func (o *opCopyString) String() string {
 }
 
 func (o *opCopyString) Op() {}
+
+type opCopyStruct struct {
+	Offset          uintptr
+	Size            uintptr
+	SubInstructions *instructions
+}
+
+func (o *opCopyStruct) String() string {
+	return fmt.Sprintf("copystruct(offset: %x, size: %x, subinstructions: %v)", o.Offset, o.Size, o.SubInstructions)
+}
+
+func (o *opCopyStruct) Op() {}
 
 var _ op = &opCopyMem{}
 var _ op = &opPtrDup{}

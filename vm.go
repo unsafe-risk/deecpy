@@ -7,10 +7,10 @@ import (
 	"github.com/unsafe-risk/deecpy/unsafeops"
 )
 
-func exec(dst, src unsafe.Pointer, ops []op) {
+func exec(dst, src unsafe.Pointer, inst *instructions) {
 L:
-	for i := range ops {
-		switch v := ops[i].(type) {
+	for i := range inst.ops {
+		switch v := inst.ops[i].(type) {
 		case *opCopyMem:
 			unsafeops.MemMove(
 				unsafe.Add(dst, v.Offset),
@@ -91,6 +91,10 @@ L:
 				unsafe.Pointer(data),
 				uintptr(len),
 			)
+		case *opCopyStruct:
+			newDst := unsafe.Add(dst, v.Offset)
+			newSrc := unsafe.Add(src, v.Offset)
+			exec(newDst, newSrc, v.SubInstructions)
 		default:
 			// Unreachable
 			panic("unreachable")

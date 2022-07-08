@@ -4,7 +4,7 @@ import "sync"
 
 type cacheEntry struct {
 	typ uintptr
-	ops []op
+	ops *instructions
 }
 
 const cacheSize = 1 << 12
@@ -13,7 +13,7 @@ const cacheIndexMask = cacheSize - 1
 var cache = make([][]cacheEntry, cacheSize)
 var mu sync.RWMutex
 
-func getOps(typ uintptr) ([]op, bool) {
+func getOps(typ uintptr) (*instructions, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
 
@@ -32,7 +32,7 @@ func getOps(typ uintptr) ([]op, bool) {
 	return nil, false
 }
 
-func setOps(typ uintptr, ops []op) {
+func setOps(typ uintptr, ops *instructions) {
 	mu.Lock()
 	defer mu.Unlock()
 
