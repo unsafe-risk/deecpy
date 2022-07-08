@@ -19,8 +19,7 @@ func build(t reflect.Type) (*instructions, error) {
 
 	// Lookup in cache
 	if v, ok := buildCache.Load(t); ok {
-		inst := v.(*instructions)
-		return inst, nil
+		return v.(*instructions), nil
 	}
 
 	// Store Cache
