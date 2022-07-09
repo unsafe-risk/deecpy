@@ -78,7 +78,38 @@ L:
 				uintptr(s.Cap)*v.ElemSize,
 			)
 		case *opMapDup:
-			// TODO: implement
+			srcMap := (*unsafe.Pointer)(unsafe.Add(src, v.Offset))
+			srcMapIface := unsafeops.MakeEface(*srcMap, v.MapUnsafeType)
+			srcMapReflectValue := reflect.ValueOf(srcMapIface)
+			keys := srcMapReflectValue.MapKeys()
+			newMap := reflect.MakeMapWithSize(v.ReflectType, len(keys))
+			for i := range keys {
+				oldKey := keys[i]
+				oldKeyIface := oldKey.Interface()
+				oldKeyPtr := unsafeops.DataOf(&oldKeyIface)
+				oldKeyType := unsafeops.TypeID(&oldKeyIface)
+				newKeyBuffer := make([]byte, v.KeySize)
+				newKeySliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&newKeyBuffer))
+				newKeyPtr := unsafe.Pointer(newKeySliceHeader.Data)
+				exec(newKeyPtr, oldKeyPtr, v.KeySubInstructions)
+				newKeyIface := unsafeops.MakeEface(newKeyPtr, oldKeyType)
+				newKeyValue := reflect.ValueOf(newKeyIface)
+
+				oldValue := srcMapReflectValue.MapIndex(oldKey)
+				oldValueIface := oldValue.Interface()
+				oldValuePtr := unsafeops.DataOf(&oldValueIface)
+				oldValueType := unsafeops.TypeID(&oldValueIface)
+				newValueBuffer := make([]byte, v.ValueSize)
+				newValueSliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&newValueBuffer))
+				newValuePtr := unsafe.Pointer(newValueSliceHeader.Data)
+				exec(newValuePtr, oldValuePtr, v.ValueSubInstructions)
+				newValueIface := unsafeops.MakeEface(newValuePtr, oldValueType)
+				newValueValue := reflect.ValueOf(newValueIface)
+
+				newMap.SetMapIndex(newKeyValue, newValueValue)
+			}
+			newMapPtr := newMap.UnsafePointer()
+			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = newMapPtr
 		case *opCopyString:
 			s := *(*reflect.StringHeader)(unsafe.Add(src, v.Offset))
 			len := s.Len

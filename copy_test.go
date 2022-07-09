@@ -118,3 +118,17 @@ func TestOpPtrDupMem(t *testing.T) {
 		t.Errorf("expected %v, got %v", a, b)
 	}
 }
+
+func TestCopyMapStringUInt64(t *testing.T) {
+	mapA := &map[string]uint64{
+		"foo": 1,
+		"bar": 2,
+	}
+	mapB, err := Duplicate(mapA)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(mapB, mapA) {
+		t.Errorf("expected %v, got %v", mapA, mapB)
+	}
+}

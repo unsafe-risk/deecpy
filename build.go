@@ -6,6 +6,8 @@ import (
 	"io"
 	"reflect"
 	"sync"
+
+	"github.com/unsafe-risk/deecpy/unsafeops"
 )
 
 var ErrUnsupportedType = errors.New("unsupported type")
@@ -136,6 +138,9 @@ func build(t reflect.Type) (*instructions, error) {
 
 		return &inst, nil
 	case reflect.Map:
+		Map := reflect.MakeMap(t)
+		MapIface := Map.Interface()
+		MapType := unsafeops.TypeID(&MapIface)
 		key := t.Key()
 		keySize := key.Size()
 		elem := t.Elem()
@@ -152,6 +157,7 @@ func build(t reflect.Type) (*instructions, error) {
 		inst.ops = append(inst.ops, &opMapDup{
 			Offset:               0,
 			ReflectType:          t,
+			MapUnsafeType:        MapType,
 			KeySize:              keySize,
 			ValueSize:            elemSize,
 			KeySubInstructions:   keySubOps,

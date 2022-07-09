@@ -1,6 +1,8 @@
 package unsafeops
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 type Eface struct {
 	_type uintptr
@@ -18,4 +20,15 @@ func noescape[T any](x *T) *T {
 
 func TypeID(v *any) uintptr {
 	return EfaceOf(noescape(v))._type
+}
+
+func DataOf(v *any) unsafe.Pointer {
+	return EfaceOf(noescape(v)).data
+}
+
+func MakeEface(data unsafe.Pointer, t uintptr) any {
+	return *(*any)(unsafe.Pointer(&Eface{
+		_type: t,
+		data:  data,
+	}))
 }

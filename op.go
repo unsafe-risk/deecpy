@@ -32,7 +32,7 @@ type opPtrDup struct {
 }
 
 func (o *opPtrDup) String() string {
-	return fmt.Sprintf("ptrdup(offset: %x, size: %x, subinstructions: %v)", o.Offset, o.Size, o.SubInstructions)
+	return fmt.Sprintf("ptrdup(offset: %x, size: %x)", o.Offset, o.Size)
 }
 
 func (o *opPtrDup) Op() {}
@@ -56,7 +56,7 @@ type opArrayCopy struct {
 }
 
 func (o *opArrayCopy) String() string {
-	return fmt.Sprintf("arraycopy(offset: %x, arraylen: %x, elemsize: %x, subinstructions: %v)", o.Offset, o.ArrayLen, o.ElemSize, o.SubInstructions)
+	return fmt.Sprintf("arraycopy(offset: %x, arraylen: %x, elemsize: %x)", o.Offset, o.ArrayLen, o.ElemSize)
 }
 
 func (o *opArrayCopy) Op() {}
@@ -68,7 +68,7 @@ type opSliceCopy struct {
 }
 
 func (o *opSliceCopy) String() string {
-	return fmt.Sprintf("slicecopy(offset: %x, elemsize: %x, subinstructions: %v)", o.Offset, o.ElemSize, o.SubInstructions)
+	return fmt.Sprintf("slicecopy(offset: %x, elemsize: %x)", o.Offset, o.ElemSize)
 }
 
 func (o *opSliceCopy) Op() {}
@@ -88,6 +88,7 @@ type opMapDup struct {
 	Offset uintptr
 
 	ReflectType          reflect.Type
+	MapUnsafeType        uintptr
 	KeySize              uintptr
 	KeySubInstructions   *instructions
 	ValueSize            uintptr
@@ -95,7 +96,7 @@ type opMapDup struct {
 }
 
 func (o *opMapDup) String() string {
-	return fmt.Sprintf("mapdup(offset: %x, keysize: %x, valuesize: %x, keysubinstructions: %v, valuesubinstructions: %v)", o.Offset, o.KeySize, o.ValueSize, o.KeySubInstructions, o.ValueSubInstructions)
+	return fmt.Sprintf("mapdup(offset: %x, reflecttype: %s, mapunsafetype: %x, keysize: %x, valuesize: %x)", o.Offset, o.ReflectType, o.MapUnsafeType, o.KeySize, o.ValueSize)
 }
 
 func (o *opMapDup) Op() {}
@@ -117,7 +118,7 @@ type opCopyStruct struct {
 }
 
 func (o *opCopyStruct) String() string {
-	return fmt.Sprintf("copystruct(offset: %x, size: %x, subinstructions: %v)", o.Offset, o.Size, o.SubInstructions)
+	return fmt.Sprintf("copystruct(offset: %x, size: %x)", o.Offset, o.Size)
 }
 
 func (o *opCopyStruct) Op() {}
