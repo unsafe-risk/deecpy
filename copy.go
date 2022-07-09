@@ -26,6 +26,7 @@ func Copy[T any](dst, src *T) error {
 		unsafe.Pointer(dst),
 		unsafe.Pointer(src),
 		inst,
+		false,
 	)
 	return nil
 }

@@ -16,9 +16,28 @@ type A struct {
 	C string
 	D []int
 	E F
+	G [4]F
+	H []F
 }
 
-var a = A{B: 1, C: "2", D: []int{3, 4, 5}, E: F{g: 6, h: "7", I: new(byte)}}
+var a = A{
+	B: 1,
+	C: "2",
+	D: []int{3, 4, 5},
+	E: F{g: 6, h: "7", I: new(byte)},
+	G: [4]F{
+		{g: 8, h: "9"},
+		{g: 10, h: "11"},
+		{g: 12, h: "13"},
+		{g: 14, h: "15"},
+	},
+	H: []F{
+		{g: 16, h: "17"},
+		{g: 18, h: "19"},
+		{g: 20, h: "21"},
+		{g: 22, h: "23"},
+	},
+}
 
 func BenchmarkCopy(b *testing.B) {
 	Copy(&A{}, &a) // warmup
@@ -31,6 +50,17 @@ func BenchmarkCopy(b *testing.B) {
 			}
 		}
 	})
+}
+
+func TestDuplicate(t *testing.T) {
+	a := &a
+	b, err := Duplicate(a)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(b, a) {
+		t.Errorf("expected %v, got %v", a, b)
+	}
 }
 
 func TestCopyBigInt(t *testing.T) {

@@ -7,11 +7,14 @@ import (
 	"github.com/unsafe-risk/deecpy/unsafeops"
 )
 
-func exec(dst, src unsafe.Pointer, inst *instructions) {
+func exec(dst, src unsafe.Pointer, inst *instructions, nocopy bool) {
 L:
 	for i := range inst.ops {
 		switch v := inst.ops[i].(type) {
 		case *opCopyMem:
+			if nocopy {
+				continue L
+			}
 			unsafeops.MemMove(
 				unsafe.Add(dst, v.Offset),
 				unsafe.Add(src, v.Offset),
@@ -25,7 +28,7 @@ L:
 			}
 			obj := make([]byte, v.Size)
 			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafe.Pointer(&obj[0])
-			exec(*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)), srcPtr, v.SubInstructions)
+			exec(*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)), srcPtr, v.SubInstructions, false)
 		case *opPtrDupMem:
 			srcPtr := *(*unsafe.Pointer)(unsafe.Add(src, v.Offset))
 			if srcPtr == nil {
@@ -33,9 +36,12 @@ L:
 				continue L
 			}
 			obj := make([]byte, v.Size)
-			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafe.Pointer(&obj[0])
+			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&obj)).Data)
+			if v.Size == 0 {
+				continue L
+			}
 			unsafeops.MemMove(
-				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)),
+				unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&obj)).Data),
 				srcPtr,
 				v.Size,
 			)
@@ -45,22 +51,28 @@ L:
 					unsafe.Add(dst, v.Offset+i*v.ElemSize),
 					unsafe.Add(src, v.Offset+i*v.ElemSize),
 					v.SubInstructions,
+					nocopy,
 				)
 			}
 		case *opSliceCopy:
 			s := *(*reflect.SliceHeader)(unsafe.Add(src, v.Offset))
 			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Cap = s.Cap
 			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Len = s.Len
-			if s.Cap == 0 {
+			if uintptr(s.Cap)*v.ElemSize == 0 {
 				continue L
 			}
 			sliceBuffer := make([]byte, uintptr(s.Cap)*v.ElemSize)
-			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data = uintptr(unsafe.Pointer(&sliceBuffer[0]))
+			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data = (*reflect.SliceHeader)(unsafe.Pointer(&sliceBuffer)).Data
+
+			sliceSrcData := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Add(src, v.Offset)).Data)
+			sliceDstData := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data)
+
 			for i := uintptr(0); i < uintptr(s.Cap); i++ {
 				exec(
-					unsafe.Add(dst, v.Offset+uintptr(i)*v.ElemSize),
-					unsafe.Add(src, v.Offset+uintptr(i)*v.ElemSize),
+					unsafe.Add(sliceSrcData, uintptr(i)*v.ElemSize),
+					unsafe.Add(sliceDstData, uintptr(i)*v.ElemSize),
 					v.SubInstructions,
+					false,
 				)
 			}
 		case *opSliceCopyMem:
@@ -91,7 +103,7 @@ L:
 				newKeyBuffer := make([]byte, v.KeySize)
 				newKeySliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&newKeyBuffer))
 				newKeyPtr := unsafe.Pointer(newKeySliceHeader.Data)
-				exec(newKeyPtr, oldKeyPtr, v.KeySubInstructions)
+				exec(newKeyPtr, oldKeyPtr, v.KeySubInstructions, false)
 				newKeyIface := unsafeops.MakeEface(newKeyPtr, oldKeyType)
 				newKeyValue := reflect.ValueOf(newKeyIface)
 
@@ -102,7 +114,7 @@ L:
 				newValueBuffer := make([]byte, v.ValueSize)
 				newValueSliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&newValueBuffer))
 				newValuePtr := unsafe.Pointer(newValueSliceHeader.Data)
-				exec(newValuePtr, oldValuePtr, v.ValueSubInstructions)
+				exec(newValuePtr, oldValuePtr, v.ValueSubInstructions, false)
 				newValueIface := unsafeops.MakeEface(newValuePtr, oldValueType)
 				newValueValue := reflect.ValueOf(newValueIface)
 
@@ -125,7 +137,7 @@ L:
 		case *opCopyStruct:
 			newDst := unsafe.Add(dst, v.Offset)
 			newSrc := unsafe.Add(src, v.Offset)
-			exec(newDst, newSrc, v.SubInstructions)
+			exec(newDst, newSrc, v.SubInstructions, true)
 		default:
 			// Unreachable
 			panic("unreachable")
