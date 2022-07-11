@@ -46,8 +46,9 @@ func build(t reflect.Type) (*instructions, error) {
 		if isValueType(elem) {
 			inst.ops = append(inst.ops,
 				&opPtrDupMem{
-					Offset: 0,
-					Size:   elemSize,
+					Offset:     0,
+					Size:       elemSize,
+					UnsafeType: unsafeops.UnsafeType(elem),
 				},
 			)
 			return &inst, nil
@@ -60,6 +61,7 @@ func build(t reflect.Type) (*instructions, error) {
 			&opPtrDup{
 				Offset:          0,
 				Size:            elemSize,
+				UnsafeType:      unsafeops.UnsafeType(elem),
 				SubInstructions: subInsts,
 			},
 		)
@@ -75,6 +77,7 @@ func build(t reflect.Type) (*instructions, error) {
 			Offset:          0,
 			ArrayLen:        uintptr(t.Len()),
 			ElemSize:        elemSize,
+			UnsafeElemType:  unsafeops.UnsafeType(elem),
 			SubInstructions: subInsts,
 		})
 		return &inst, nil
@@ -83,8 +86,9 @@ func build(t reflect.Type) (*instructions, error) {
 		elemSize := elem.Size()
 		if isValueType(elem) {
 			inst.ops = append(inst.ops, &opSliceCopyMem{
-				Offset:   0,
-				ElemSize: elemSize,
+				Offset:         0,
+				ElemSize:       elemSize,
+				UnsafeElemType: unsafeops.UnsafeType(elem),
 			})
 			return &inst, nil
 		}
@@ -95,6 +99,7 @@ func build(t reflect.Type) (*instructions, error) {
 		inst.ops = append(inst.ops, &opSliceCopy{
 			Offset:          0,
 			ElemSize:        elemSize,
+			UnsafeElemType:  unsafeops.UnsafeType(elem),
 			SubInstructions: subInsts,
 		})
 		return &inst, nil
@@ -160,6 +165,8 @@ func build(t reflect.Type) (*instructions, error) {
 			MapUnsafeType:        MapType,
 			KeySize:              keySize,
 			ValueSize:            elemSize,
+			KeyUnsafeType:        unsafeops.UnsafeType(key),
+			ValueUnsafeType:      unsafeops.UnsafeType(elem),
 			KeySubInstructions:   keySubOps,
 			ValueSubInstructions: elemSubOps,
 		})
