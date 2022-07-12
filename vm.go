@@ -26,8 +26,7 @@ L:
 				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = nil
 				continue
 			}
-			obj := make([]byte, v.Size)
-			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafe.Pointer(&obj[0])
+			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafeops.NewObject(v.UnsafeType)
 			exec(*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)), srcPtr, v.SubInstructions, false)
 		case *opPtrDupMem:
 			srcPtr := *(*unsafe.Pointer)(unsafe.Add(src, v.Offset))
@@ -35,13 +34,12 @@ L:
 				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = nil
 				continue L
 			}
-			obj := make([]byte, v.Size)
-			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&obj)).Data)
+			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafeops.NewObject(v.UnsafeType)
 			if v.Size == 0 {
 				continue L
 			}
 			unsafeops.MemMove(
-				unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&obj)).Data),
+				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)),
 				srcPtr,
 				v.Size,
 			)
@@ -61,8 +59,7 @@ L:
 			if uintptr(s.Cap)*v.ElemSize == 0 {
 				continue L
 			}
-			sliceBuffer := make([]byte, uintptr(s.Cap)*v.ElemSize)
-			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data = (*reflect.SliceHeader)(unsafe.Pointer(&sliceBuffer)).Data
+			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data = uintptr(unsafeops.NewArray(v.UnsafeElemType, s.Cap))
 
 			sliceSrcData := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Add(src, v.Offset)).Data)
 			sliceDstData := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data)
@@ -82,10 +79,9 @@ L:
 			if s.Cap == 0 {
 				continue L
 			}
-			sliceBuffer := make([]byte, uintptr(s.Cap)*v.ElemSize)
-			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data = uintptr(unsafe.Pointer(&sliceBuffer[0]))
+			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data = uintptr(unsafeops.NewArray(v.UnsafeElemType, s.Cap))
 			unsafeops.MemMove(
-				unsafe.Pointer(&sliceBuffer[0]),
+				unsafe.Pointer((*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Data),
 				unsafe.Pointer(s.Data),
 				uintptr(s.Cap)*v.ElemSize,
 			)
@@ -100,9 +96,7 @@ L:
 				oldKeyIface := oldKey.Interface()
 				oldKeyPtr := unsafeops.DataOf(&oldKeyIface)
 				oldKeyType := unsafeops.TypeID(&oldKeyIface)
-				newKeyBuffer := make([]byte, v.KeySize)
-				newKeySliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&newKeyBuffer))
-				newKeyPtr := unsafe.Pointer(newKeySliceHeader.Data)
+				newKeyPtr := unsafeops.NewObject(v.KeyUnsafeType)
 				exec(newKeyPtr, oldKeyPtr, v.KeySubInstructions, false)
 				newKeyIface := unsafeops.MakeEface(newKeyPtr, oldKeyType)
 				newKeyValue := reflect.ValueOf(newKeyIface)
@@ -111,9 +105,7 @@ L:
 				oldValueIface := oldValue.Interface()
 				oldValuePtr := unsafeops.DataOf(&oldValueIface)
 				oldValueType := unsafeops.TypeID(&oldValueIface)
-				newValueBuffer := make([]byte, v.ValueSize)
-				newValueSliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&newValueBuffer))
-				newValuePtr := unsafe.Pointer(newValueSliceHeader.Data)
+				newValuePtr := unsafeops.NewObject(v.ValueUnsafeType)
 				exec(newValuePtr, oldValuePtr, v.ValueSubInstructions, false)
 				newValueIface := unsafeops.MakeEface(newValuePtr, oldValueType)
 				newValueValue := reflect.ValueOf(newValueIface)
