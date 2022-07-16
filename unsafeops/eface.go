@@ -13,17 +13,17 @@ func EfaceOf(ep *any) *Eface {
 	return (*Eface)(unsafe.Pointer(ep))
 }
 
-func noescape[T any](x *T) *T {
+func NoEscape[T any](x *T) *T {
 	v := uintptr(unsafe.Pointer(x))
 	return (*T)(unsafe.Pointer(v ^ 0))
 }
 
 func TypeID(v *any) uintptr {
-	return EfaceOf(noescape(v))._type
+	return EfaceOf(NoEscape(v))._type
 }
 
 func DataOf(v *any) unsafe.Pointer {
-	return EfaceOf(noescape(v)).data
+	return EfaceOf(NoEscape(v)).data
 }
 
 func MakeEface(data unsafe.Pointer, t uintptr) any {

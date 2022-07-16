@@ -31,11 +31,11 @@ func Copy[T any](dst, src *T) error {
 	return nil
 }
 
-func Duplicate[T any](src *T) (*T, error) {
+func Duplicate[T any](src T) (T, error) {
 	var dst T
-	err := Copy(&dst, src)
+	err := Copy(unsafeops.NoEscape(&dst), unsafeops.NoEscape(&src))
 	if err != nil {
-		return nil, err
+		return dst, err
 	}
-	return &dst, nil
+	return dst, nil
 }
