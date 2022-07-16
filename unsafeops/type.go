@@ -6,6 +6,6 @@ import (
 )
 
 func UnsafeType(typ reflect.Type) uintptr {
-	eface := (*Eface)(unsafe.Pointer(noescape(&typ)))
+	eface := (*Eface)(unsafe.Pointer(NoEscape(&typ)))
 	return uintptr(eface.data)
 }
