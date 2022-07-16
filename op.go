@@ -28,6 +28,7 @@ func (o *opCopyMem) Op() {}
 type opPtrDup struct {
 	Offset          uintptr
 	Size            uintptr
+	UnsafeType      uintptr
 	SubInstructions *instructions
 }
 
@@ -38,8 +39,9 @@ func (o *opPtrDup) String() string {
 func (o *opPtrDup) Op() {}
 
 type opPtrDupMem struct {
-	Offset uintptr
-	Size   uintptr
+	Offset     uintptr
+	Size       uintptr
+	UnsafeType uintptr
 }
 
 func (o *opPtrDupMem) String() string {
@@ -52,6 +54,7 @@ type opArrayCopy struct {
 	Offset          uintptr
 	ArrayLen        uintptr
 	ElemSize        uintptr
+	UnsafeElemType  uintptr
 	SubInstructions *instructions
 }
 
@@ -64,6 +67,7 @@ func (o *opArrayCopy) Op() {}
 type opSliceCopy struct {
 	Offset          uintptr
 	ElemSize        uintptr
+	UnsafeElemType  uintptr
 	SubInstructions *instructions
 }
 
@@ -74,8 +78,9 @@ func (o *opSliceCopy) String() string {
 func (o *opSliceCopy) Op() {}
 
 type opSliceCopyMem struct {
-	Offset   uintptr
-	ElemSize uintptr
+	Offset         uintptr
+	ElemSize       uintptr
+	UnsafeElemType uintptr
 }
 
 func (o *opSliceCopyMem) String() string {
@@ -90,8 +95,10 @@ type opMapDup struct {
 	ReflectType          reflect.Type
 	MapUnsafeType        uintptr
 	KeySize              uintptr
+	KeyUnsafeType        uintptr
 	KeySubInstructions   *instructions
 	ValueSize            uintptr
+	ValueUnsafeType      uintptr
 	ValueSubInstructions *instructions
 }
 
