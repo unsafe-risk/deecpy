@@ -7,6 +7,7 @@ import (
 	"github.com/unsafe-risk/deecpy/unsafeops"
 )
 
+// Copy deeply copies the given object.
 func Copy[T any](dst, src *T) error {
 	sAny := any(src)
 	typID := unsafeops.TypeID(&sAny)
@@ -31,6 +32,7 @@ func Copy[T any](dst, src *T) error {
 	return nil
 }
 
+// Duplicate returns a copy of the given object.
 func Duplicate[T any](src T) (T, error) {
 	var dst T
 	err := Copy(unsafeops.NoEscape(&dst), unsafeops.NoEscape(&src))
