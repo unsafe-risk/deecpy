@@ -53,7 +53,7 @@ L:
 				)
 			}
 		case *opSliceCopy:
-			s := *(*reflect.SliceHeader)(unsafe.Add(src, v.Offset))
+			s := (*reflect.SliceHeader)(unsafe.Add(src, v.Offset))
 			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Cap = s.Cap
 			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Len = s.Len
 			if uintptr(s.Cap)*v.ElemSize == 0 {
@@ -73,7 +73,7 @@ L:
 				)
 			}
 		case *opSliceCopyMem:
-			s := *(*reflect.SliceHeader)(unsafe.Add(src, v.Offset))
+			s := (*reflect.SliceHeader)(unsafe.Add(src, v.Offset))
 			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Cap = s.Cap
 			(*reflect.SliceHeader)(unsafe.Add(dst, v.Offset)).Len = s.Len
 			if s.Cap == 0 {
@@ -115,16 +115,14 @@ L:
 			newMapPtr := newMap.UnsafePointer()
 			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = newMapPtr
 		case *opCopyString:
-			s := *(*reflect.StringHeader)(unsafe.Add(src, v.Offset))
-			len := s.Len
-			data := s.Data
-			buffer := make([]byte, len)
+			s := (*reflect.StringHeader)(unsafe.Add(src, v.Offset))
+			buffer := make([]byte, s.Len)
 			(*reflect.StringHeader)(unsafe.Add(dst, v.Offset)).Data = uintptr(unsafe.Pointer(&buffer[0]))
-			(*reflect.StringHeader)(unsafe.Add(dst, v.Offset)).Len = len
+			(*reflect.StringHeader)(unsafe.Add(dst, v.Offset)).Len = s.Len
 			unsafeops.MemMove(
 				unsafe.Pointer(&buffer[0]),
-				unsafe.Pointer(data),
-				uintptr(len),
+				unsafe.Pointer(s.Data),
+				uintptr(s.Len),
 			)
 		case *opCopyStruct:
 			newDst := unsafe.Add(dst, v.Offset)
