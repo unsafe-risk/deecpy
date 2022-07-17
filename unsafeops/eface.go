@@ -13,8 +13,10 @@ func EfaceOf(ep *any) *Eface {
 	return (*Eface)(unsafe.Pointer(ep))
 }
 
+//nolint:uintptr
 func NoEscape[T any](x *T) *T {
 	v := uintptr(unsafe.Pointer(x))
+	//nolint:staticcheck
 	return (*T)(unsafe.Pointer(v ^ 0))
 }
 

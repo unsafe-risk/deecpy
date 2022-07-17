@@ -40,6 +40,7 @@ var a = A{
 }
 
 func BenchmarkCopy(b *testing.B) {
+	//nolint:errcheck
 	Copy(&A{}, &a) // warmup
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
