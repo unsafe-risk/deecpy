@@ -7,7 +7,22 @@ import (
 	"github.com/unsafe-risk/deecpy/unsafeops"
 )
 
-func exec(dst, src unsafe.Pointer, inst *instructions, nocopy bool) {
+type ptrmap struct {
+	k unsafe.Pointer
+	v unsafe.Pointer
+}
+
+func ptrmapSearch(m *[]ptrmap, k unsafe.Pointer) (unsafe.Pointer, bool) {
+	for _, v := range *m {
+		if v.k == k {
+			return v.v, true
+		}
+	}
+	return nil, false
+}
+
+func exec(dst, src unsafe.Pointer, inst *instructions, nocopy bool, pmap *[]ptrmap) {
+	*pmap = append(*pmap, ptrmap{k: src, v: dst})
 L:
 	for i := range inst.ops {
 		switch v := inst.ops[i].(type) {
@@ -26,13 +41,21 @@ L:
 				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = nil
 				continue
 			}
+			if val, ok := ptrmapSearch(pmap, srcPtr); ok {
+				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = val
+				continue
+			}
 			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafeops.NewObject(v.UnsafeType)
-			exec(*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)), srcPtr, v.SubInstructions, false)
+			exec(*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)), srcPtr, v.SubInstructions, false, pmap)
 		case *opPtrDupMem:
 			srcPtr := *(*unsafe.Pointer)(unsafe.Add(src, v.Offset))
 			if srcPtr == nil {
 				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = nil
 				continue L
+			}
+			if val, ok := ptrmapSearch(pmap, srcPtr); ok {
+				*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = val
+				continue
 			}
 			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = unsafeops.NewObject(v.UnsafeType)
 			if v.Size == 0 {
@@ -50,6 +73,7 @@ L:
 					unsafe.Add(src, v.Offset+i*v.ElemSize),
 					v.SubInstructions,
 					nocopy,
+					pmap,
 				)
 			}
 		case *opSliceCopy:
@@ -70,6 +94,7 @@ L:
 					unsafe.Add(sliceDstData, uintptr(i)*v.ElemSize),
 					v.SubInstructions,
 					false,
+					pmap,
 				)
 			}
 		case *opSliceCopyMem:
@@ -96,8 +121,13 @@ L:
 				oldKeyIface := oldKey.Interface()
 				oldKeyPtr := unsafeops.DataOf(&oldKeyIface)
 				oldKeyType := unsafeops.TypeID(&oldKeyIface)
-				newKeyPtr := unsafeops.NewObject(v.KeyUnsafeType)
-				exec(newKeyPtr, oldKeyPtr, v.KeySubInstructions, false)
+				var newKeyPtr unsafe.Pointer
+				if val, ok := ptrmapSearch(pmap, oldKeyPtr); ok {
+					newKeyPtr = val
+				} else {
+					newKeyPtr = unsafeops.NewObject(v.KeyUnsafeType)
+					exec(newKeyPtr, oldKeyPtr, v.KeySubInstructions, false, pmap)
+				}
 				newKeyIface := unsafeops.MakeEface(newKeyPtr, oldKeyType)
 				newKeyValue := reflect.ValueOf(newKeyIface)
 
@@ -105,8 +135,13 @@ L:
 				oldValueIface := oldValue.Interface()
 				oldValuePtr := unsafeops.DataOf(&oldValueIface)
 				oldValueType := unsafeops.TypeID(&oldValueIface)
-				newValuePtr := unsafeops.NewObject(v.ValueUnsafeType)
-				exec(newValuePtr, oldValuePtr, v.ValueSubInstructions, false)
+				var newValuePtr unsafe.Pointer
+				if val, ok := ptrmapSearch(pmap, oldValuePtr); ok {
+					newValuePtr = val
+				} else {
+					newValuePtr = unsafeops.NewObject(v.ValueUnsafeType)
+					exec(newValuePtr, oldValuePtr, v.ValueSubInstructions, false, pmap)
+				}
 				newValueIface := unsafeops.MakeEface(newValuePtr, oldValueType)
 				newValueValue := reflect.ValueOf(newValueIface)
 
@@ -127,7 +162,7 @@ L:
 		case *opCopyStruct:
 			newDst := unsafe.Add(dst, v.Offset)
 			newSrc := unsafe.Add(src, v.Offset)
-			exec(newDst, newSrc, v.SubInstructions, true)
+			exec(newDst, newSrc, v.SubInstructions, true, pmap)
 		default:
 			// Unreachable
 			panic("unreachable")
