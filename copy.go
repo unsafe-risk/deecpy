@@ -23,11 +23,14 @@ func Copy[T any](dst, src *T) error {
 		setOps(typID, inst)
 	}
 
+	var pmapArr [64]ptrmap
+	pmap := pmapArr[:0]
 	exec(
 		unsafe.Pointer(dst),
 		unsafe.Pointer(src),
 		inst,
 		false,
+		unsafeops.NoEscape(&pmap),
 	)
 	return nil
 }

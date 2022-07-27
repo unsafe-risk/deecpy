@@ -18,6 +18,7 @@ type A struct {
 	E F
 	G [4]F
 	H []F
+	I *A
 }
 
 var a = A{
@@ -38,6 +39,11 @@ var a = A{
 		{g: 22, h: "23"},
 	},
 }
+
+var _ = func() int {
+	a.I = &a
+	return 0
+}()
 
 func BenchmarkCopy(b *testing.B) {
 	//nolint:errcheck
@@ -61,6 +67,9 @@ func TestDuplicate(t *testing.T) {
 	}
 	if !reflect.DeepEqual(b, a) {
 		t.Errorf("expected %v, got %v", a, b)
+	}
+	if b.I != b {
+		t.Errorf("recursive copy failed")
 	}
 }
 
