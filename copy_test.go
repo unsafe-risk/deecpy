@@ -13,6 +13,8 @@ type F struct {
 	J *struct{}
 
 	UnsupportedType interface{}
+
+	EmptySlice []struct{}
 }
 type A struct {
 	B uint
