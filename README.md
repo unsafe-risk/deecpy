@@ -1,6 +1,7 @@
 # Deecpy
 
 [![Go Reference](https://img.shields.io/badge/go-reference-%23007d9c?style=for-the-badge&logo=go)](https://pkg.go.dev/github.com/unsafe-risk/deecpy)
+[![GitHub Workflow Status (push)](https://img.shields.io/github/workflow/status/unsafe-risk/deecpy/go_test/main?event=push&style=for-the-badge)](https://github.com/unsafe-risk/deecpy/actions/workflows/go_test.yml)
 
 **Deecpy**, The DeepCopy Library
 
