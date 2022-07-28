@@ -10,6 +10,9 @@ type F struct {
 	g uint64
 	h string
 	I *byte
+	J *struct{}
+
+	UnsupportedType interface{}
 }
 type A struct {
 	B uint
