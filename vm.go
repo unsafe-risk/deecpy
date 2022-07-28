@@ -150,15 +150,10 @@ L:
 			newMapPtr := newMap.UnsafePointer()
 			*(*unsafe.Pointer)(unsafe.Add(dst, v.Offset)) = newMapPtr
 		case *opCopyString:
-			s := (*reflect.StringHeader)(unsafe.Add(src, v.Offset))
-			buffer := make([]byte, s.Len)
-			(*reflect.StringHeader)(unsafe.Add(dst, v.Offset)).Data = uintptr(unsafe.Pointer(&buffer[0]))
-			(*reflect.StringHeader)(unsafe.Add(dst, v.Offset)).Len = s.Len
-			unsafeops.MemMove(
-				unsafe.Pointer(&buffer[0]),
-				unsafe.Pointer(s.Data),
-				uintptr(s.Len),
-			)
+			s := *(*string)(unsafe.Add(src, v.Offset))
+			buffer := make([]byte, len(s))
+			copy(buffer, s)
+			*(*string)(unsafe.Add(dst, v.Offset)) = *(*string)(unsafe.Pointer(&buffer))
 		case *opCopyStruct:
 			newDst := unsafe.Add(dst, v.Offset)
 			newSrc := unsafe.Add(src, v.Offset)
