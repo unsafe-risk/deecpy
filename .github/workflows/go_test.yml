@@ -23,3 +23,13 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Cover
+      run: go test -coverprofile=coverage.out -covermode=atomic ./...
+    
+    - name: codecov-umbrella
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.out
+        fail_ci_if_error: true
