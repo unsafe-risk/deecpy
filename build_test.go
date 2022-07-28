@@ -1,6 +1,7 @@
 package deecpy
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -11,5 +12,5 @@ func Test_build(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Log(ops)
+	fmt.Println(ops)
 }
