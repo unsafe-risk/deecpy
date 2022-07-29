@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/unsafe-risk/deecpy/unsafeops"
+	"v8.run/go/deecpy/unsafeops"
 )
 
 var ErrUnsupportedType = errors.New("unsupported type")

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/unsafe-risk/deecpy/unsafeops"
+	"v8.run/go/deecpy/unsafeops"
 )
 
 // Copy deeply copies the given object.

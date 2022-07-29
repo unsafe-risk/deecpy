@@ -1,3 +1,3 @@
-module github.com/unsafe-risk/deecpy
+module v8.run/go/deecpy
 
 go 1.18
