@@ -158,6 +158,8 @@ L:
 			newDst := unsafe.Add(dst, v.Offset)
 			newSrc := unsafe.Add(src, v.Offset)
 			exec(newDst, newSrc, v.SubInstructions, true, pmap)
+		case *opCopyInterface:
+			// TODO: Implement Interface Copy
 		default:
 			// Unreachable
 			panic("unreachable")

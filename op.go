@@ -1,12 +1,10 @@
 package deecpy
 
 import (
-	"fmt"
 	"reflect"
 )
 
 type op interface {
-	String() string
 	Op()
 }
 
@@ -19,10 +17,6 @@ type opCopyMem struct {
 	Size   uintptr
 }
 
-func (o *opCopyMem) String() string {
-	return fmt.Sprintf("copymem(offset: %x, size: %x)", o.Offset, o.Size)
-}
-
 func (o *opCopyMem) Op() {}
 
 type opPtrDup struct {
@@ -32,20 +26,12 @@ type opPtrDup struct {
 	SubInstructions *instructions
 }
 
-func (o *opPtrDup) String() string {
-	return fmt.Sprintf("ptrdup(offset: %x, size: %x)", o.Offset, o.Size)
-}
-
 func (o *opPtrDup) Op() {}
 
 type opPtrDupMem struct {
 	Offset     uintptr
 	Size       uintptr
 	UnsafeType uintptr
-}
-
-func (o *opPtrDupMem) String() string {
-	return fmt.Sprintf("ptrdupmem(offset: %x, size: %x)", o.Offset, o.Size)
 }
 
 func (o *opPtrDupMem) Op() {}
@@ -58,10 +44,6 @@ type opArrayCopy struct {
 	SubInstructions *instructions
 }
 
-func (o *opArrayCopy) String() string {
-	return fmt.Sprintf("arraycopy(offset: %x, arraylen: %x, elemsize: %x)", o.Offset, o.ArrayLen, o.ElemSize)
-}
-
 func (o *opArrayCopy) Op() {}
 
 type opSliceCopy struct {
@@ -71,20 +53,12 @@ type opSliceCopy struct {
 	SubInstructions *instructions
 }
 
-func (o *opSliceCopy) String() string {
-	return fmt.Sprintf("slicecopy(offset: %x, elemsize: %x)", o.Offset, o.ElemSize)
-}
-
 func (o *opSliceCopy) Op() {}
 
 type opSliceCopyMem struct {
 	Offset         uintptr
 	ElemSize       uintptr
 	UnsafeElemType uintptr
-}
-
-func (o *opSliceCopyMem) String() string {
-	return fmt.Sprintf("slicecopymem(offset: %x, elemsize: %x)", o.Offset, o.ElemSize)
 }
 
 func (o *opSliceCopyMem) Op() {}
@@ -102,18 +76,10 @@ type opMapDup struct {
 	ValueSubInstructions *instructions
 }
 
-func (o *opMapDup) String() string {
-	return fmt.Sprintf("mapdup(offset: %x, reflecttype: %s, mapunsafetype: %x, keysize: %x, valuesize: %x)", o.Offset, o.ReflectType, o.MapUnsafeType, o.KeySize, o.ValueSize)
-}
-
 func (o *opMapDup) Op() {}
 
 type opCopyString struct {
 	Offset uintptr
-}
-
-func (o *opCopyString) String() string {
-	return fmt.Sprintf("copystring(offset: %x)", o.Offset)
 }
 
 func (o *opCopyString) Op() {}
@@ -124,17 +90,21 @@ type opCopyStruct struct {
 	SubInstructions *instructions
 }
 
-func (o *opCopyStruct) String() string {
-	return fmt.Sprintf("copystruct(offset: %x, size: %x)", o.Offset, o.Size)
-}
-
 func (o *opCopyStruct) Op() {}
 
-var _ op = &opCopyMem{}
-var _ op = &opPtrDup{}
-var _ op = &opPtrDupMem{}
-var _ op = &opArrayCopy{}
-var _ op = &opSliceCopy{}
-var _ op = &opSliceCopyMem{}
-var _ op = &opMapDup{}
-var _ op = &opCopyString{}
+type opCopyInterface struct {
+	Offset uintptr
+}
+
+func (o *opCopyInterface) Op() {}
+
+var _ op = (*opCopyMem)(nil)
+var _ op = (*opPtrDup)(nil)
+var _ op = (*opPtrDupMem)(nil)
+var _ op = (*opArrayCopy)(nil)
+var _ op = (*opSliceCopy)(nil)
+var _ op = (*opSliceCopyMem)(nil)
+var _ op = (*opMapDup)(nil)
+var _ op = (*opCopyString)(nil)
+var _ op = (*opCopyStruct)(nil)
+var _ op = (*opCopyInterface)(nil)

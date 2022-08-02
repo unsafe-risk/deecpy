@@ -12,25 +12,27 @@ type F struct {
 	I *byte
 	J *struct{}
 
-	UnsupportedType interface{}
+	Interface interface{}
 
 	EmptySlice []struct{}
 }
 type A struct {
-	B uint
-	C string
-	D []int
-	E F
-	G [4]F
-	H []F
-	I *A
+	B       uint
+	C       string
+	D       []int
+	E       F
+	G       [4]F
+	H       []F
+	I       *A
+	J_IFace interface{}
+	K_IFace interface{}
 }
 
 var a = A{
 	B: 1,
 	C: "2",
 	D: []int{3, 4, 5},
-	E: F{g: 6, h: "7", I: new(byte)},
+	E: F{g: 6, h: "7", I: new(byte), Interface: new(byte), J: new(struct{}), EmptySlice: []struct{}{}},
 	G: [4]F{
 		{g: 8, h: "9"},
 		{g: 10, h: "11"},
@@ -47,6 +49,8 @@ var a = A{
 
 var _ = func() int {
 	a.I = &a
+	a.J_IFace = &a
+	a.K_IFace = &a
 	return 0
 }()
 

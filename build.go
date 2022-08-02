@@ -2,8 +2,6 @@ package deecpy
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"reflect"
 	"sync"
 
@@ -179,6 +177,10 @@ func build(t reflect.Type) (*instructions, error) {
 		inst.ops = append(inst.ops, &opCopyString{
 			Offset: 0,
 		})
+	case reflect.Interface:
+		inst.ops = append(inst.ops, &opCopyInterface{
+			Offset: 0,
+		})
 	default:
 		// Unsupported type
 		if IgnoreUnsupportedTypes {
@@ -196,16 +198,3 @@ func build(t reflect.Type) (*instructions, error) {
 	}
 	return nil, ErrUnsupportedType
 }
-
-func debugBuild(t reflect.Type, w io.Writer) {
-	inst, err := build(t)
-	if err != nil {
-		panic(err)
-	}
-	for i := range inst.ops {
-		fmt.Fprintf(w, "%v\n", inst.ops[i])
-	}
-}
-
-//nolint:unused
-var _ = debugBuild
