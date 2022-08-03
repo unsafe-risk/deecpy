@@ -159,7 +159,53 @@ L:
 			newSrc := unsafe.Add(src, v.Offset)
 			exec(newDst, newSrc, v.SubInstructions, true, pmap)
 		case *opCopyInterface:
-			// TODO: Implement Interface Copy
+			srcIface := (*any)(unsafe.Add(src, v.Offset))
+			dstIface := (*any)(unsafe.Add(dst, v.Offset))
+			srcAny := unsafeops.EfaceOf(srcIface)
+			srcType := srcAny.Type
+			srcData := srcAny.Data
+
+			if srcType == 0 || srcData == nil {
+				iface := unsafeops.MakeEface(nil, srcType)
+				*dstIface = iface
+				continue L
+			}
+
+			if v, ok := ptrmapSearch(pmap, srcData); ok {
+				iface := unsafeops.MakeEface(v, srcType)
+				*dstIface = iface
+				continue L
+			}
+
+			var srcPtr unsafe.Pointer = unsafe.Pointer(unsafeops.NoEscape(&srcAny.Data))
+			indir := unsafeops.IfaceIndir(srcType)
+			if indir {
+				srcPtr = srcAny.Data
+			}
+
+			newDstPtr := unsafeops.NewObject(srcType)
+
+			inst, ok := getOps(srcType)
+			if !ok {
+				rt := unsafeops.ReflectType(srcType)
+				var err error
+				inst, err = build(rt)
+				if err != nil {
+					continue L
+				}
+				setOps(srcType, inst)
+			}
+
+			exec(newDstPtr, srcPtr, inst, false, pmap)
+
+			if indir {
+				iface := unsafeops.MakeEface(newDstPtr, srcType)
+				*dstIface = iface
+			} else {
+				iface := unsafeops.MakeEface(*(*unsafe.Pointer)(newDstPtr), srcType)
+				*dstIface = iface
+			}
+
 		default:
 			// Unreachable
 			panic("unreachable")

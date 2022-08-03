@@ -5,8 +5,8 @@ import (
 )
 
 type Eface struct {
-	_type uintptr
-	data  unsafe.Pointer
+	Type uintptr
+	Data unsafe.Pointer
 }
 
 func EfaceOf(ep *any) *Eface {
@@ -21,16 +21,16 @@ func NoEscape[T any](x *T) *T {
 }
 
 func TypeID(v *any) uintptr {
-	return EfaceOf(NoEscape(v))._type
+	return EfaceOf(NoEscape(v)).Type
 }
 
 func DataOf(v *any) unsafe.Pointer {
-	return EfaceOf(NoEscape(v)).data
+	return EfaceOf(NoEscape(v)).Data
 }
 
 func MakeEface(data unsafe.Pointer, t uintptr) any {
 	return *(*any)(unsafe.Pointer(&Eface{
-		_type: t,
-		data:  data,
+		Type: t,
+		Data: data,
 	}))
 }

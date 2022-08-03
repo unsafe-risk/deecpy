@@ -12,7 +12,8 @@ type F struct {
 	I *byte
 	J *struct{}
 
-	Interface interface{}
+	Interface0 interface{}
+	Interface1 interface{}
 
 	EmptySlice []struct{}
 }
@@ -32,7 +33,7 @@ var a = A{
 	B: 1,
 	C: "2",
 	D: []int{3, 4, 5},
-	E: F{g: 6, h: "7", I: new(byte), Interface: new(byte), J: new(struct{}), EmptySlice: []struct{}{}},
+	E: F{g: 6, h: "7", I: new(byte), Interface0: new(byte), J: new(struct{}), EmptySlice: []struct{}{}, Interface1: complex(1, 2)},
 	G: [4]F{
 		{g: 8, h: "9"},
 		{g: 10, h: "11"},
